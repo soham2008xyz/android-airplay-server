@@ -39,6 +39,8 @@
     <string name="cd_play_pause">Play/Pause</string>
     <string name="cd_rewind">Rewind</string>
     <string name="cd_fast_forward">Fast forward</string>
+    <string name="cd_next">Next</string>
+    <string name="cd_previous">Previous</string>
     <string name="volume_server">Receiver volume</string>
     <string name="volume_client">Sender volume</string>
     <string name="volume_value">%1$d%%</string>

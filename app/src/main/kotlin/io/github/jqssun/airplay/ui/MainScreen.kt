@@ -69,14 +69,6 @@ import io.github.jqssun.airplay.viewmodel.MainViewModel
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DataSourceBitmapLoader
-import androidx.media3.ui.compose.material3.MiniController
-import androidx.media3.ui.compose.material3.buttons.NextButton
-import androidx.media3.ui.compose.material3.buttons.PlayPauseButton
-import androidx.media3.ui.compose.material3.buttons.PreviousButton
-import androidx.media3.ui.compose.material3.indicator.DurationText
-import androidx.media3.ui.compose.material3.indicator.PositionText
-import androidx.media3.ui.compose.material3.indicator.ProgressSlider
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -874,12 +866,7 @@ private fun HoldScanButton(
 private fun AudioMiniController(viewModel: MainViewModel, visible: Boolean, onClick: () -> Unit) {
     if (!visible) return
     val player = viewModel.dacpPlayer ?: return
-    val context = LocalContext.current
-    MiniController(
-        player,
-        bitmapLoader = remember { DataSourceBitmapLoader.Builder(context).build() },
-        onClick = onClick
-    )
+    MiniController(player, onClick = onClick)
 }
 
 @Composable

@@ -31,7 +31,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.jqssun.airplay"
-        minSdk = 23
+        minSdk = 22
         targetSdk = 37
         versionCode = 36
         versionName = "0.0.36"
@@ -121,7 +121,7 @@ dependencies {
     implementation(libs.androidx.media)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
-    implementation(libs.media3.ui.compose.material3)
+    implementation(libs.media3.ui.compose)
     implementation(libs.media3.transformer)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.oboe)
