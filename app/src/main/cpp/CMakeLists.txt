@@ -16,6 +16,9 @@ set(CROSS_ANDROID ON CACHE BOOL "" FORCE)
 string(REGEX MATCH "[0-9]+" AIRPLAY_ANDROID_API "${ANDROID_PLATFORM}")
 set(OPENSSL_PARAMS "-D__ANDROID_API__=${AIRPLAY_ANDROID_API}" CACHE STRING "" FORCE)
 set(FORWARD_ANDROID_NDK_ROOT "${ANDROID_NDK}" CACHE STRING "" FORCE) # CI
+# link libcrypto statically: below API 24 the linker matches DT_NEEDED by soname,
+# so a bundled libcrypto.so resolves to the system's older one already in the process
+set(OPENSSL_USE_STATIC_LIBS ON CACHE BOOL "" FORCE)
 
 list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_subdirectory(third_party/openssl-cmake)
@@ -143,7 +146,7 @@ target_compile_definitions(airplay_native PRIVATE
     TARGET_RT_LITTLE_ENDIAN=1
 )
 
-target_link_options(airplay_native PRIVATE "-Wl,--build-id=none")
+target_link_options(airplay_native PRIVATE "-Wl,--build-id=none" "-Wl,--exclude-libs,libcrypto.a")
 
 target_link_libraries(airplay_native
     llhttp
