@@ -348,6 +348,8 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // LifecycleService dispatches ON_START here; its return value is replaced below
+        super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACTION_START_SERVER) {
             promoteToForeground()
             _startServer(ensureServiceStarted = false)
@@ -623,6 +625,8 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
         log(message)
     }
 
+    // SimpleBasePlayer.release() is @UnstableApi
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onDestroy() {
         stopServer()
         dacpPlayer.release()
