@@ -168,7 +168,9 @@ class DecoderSelector(private val ctx: Context) {
     }
 
     private fun _rateSupported(caps: VideoCapabilities, w: Int, h: Int, fps: Int) = try {
-        caps.getAchievableFrameRatesFor(w, h)?.let { fps <= it.upper }
+        // getAchievableFrameRatesFor is API 23; it throws NoSuchMethodError below, not IllegalArgumentException
+        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) caps.getAchievableFrameRatesFor(w, h) else null)
+            ?.let { fps <= it.upper }
             ?: caps.areSizeAndRateSupported(w, h, fps.toDouble())
     } catch (_: IllegalArgumentException) {
         false

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Build
 import android.provider.Settings
 import android.view.Window
 import android.view.WindowManager
@@ -134,7 +135,7 @@ class SeekGestureState(private val viewModel: MainViewModel) {
 
 @Stable
 class ServerVolumeState(private val context: Context) {
-    private val audioManager = context.getSystemService(AudioManager::class.java)
+    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
 
     var percentage by mutableIntStateOf(_current())
@@ -171,14 +172,20 @@ class ServerVolumeState(private val context: Context) {
         onDispose { context.unregisterReceiver(receiver) }
     }
 
-    private fun _isHeadsetOn(): Boolean =
-        audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
+    private fun _isHeadsetOn(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            // AudioManager.getDevices is API 23
+            @Suppress("DEPRECATION")
+            return audioManager.isWiredHeadsetOn || audioManager.isBluetoothA2dpOn || audioManager.isBluetoothScoOn
+        }
+        return audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
             device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
                 device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
                 device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
                 device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
                 device.type == AudioDeviceInfo.TYPE_USB_HEADSET
         }
+    }
 }
 
 @Stable

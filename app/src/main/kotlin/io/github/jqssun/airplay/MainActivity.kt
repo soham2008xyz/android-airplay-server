@@ -17,6 +17,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -172,6 +173,7 @@ class MainActivity : ComponentActivity() {
         enterPictureInPictureMode(_pipParams())
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun _pipParams(): PictureInPictureParams {
         val aspect = if (viewModel.videoPlaybackActive.value) viewModel.videoPlaybackAspect.value
             else viewModel.videoAspect.value
