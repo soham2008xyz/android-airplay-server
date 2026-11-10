@@ -10,3 +10,7 @@
 .cxx/
 
 *.jks
+
+# Device test artifacts: keep the reports, not the logs or screenshots
+/work/*
+!/work/*-report.md
