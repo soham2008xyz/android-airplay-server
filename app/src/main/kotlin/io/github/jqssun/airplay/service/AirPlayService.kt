@@ -178,6 +178,8 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
     private var volumeReceiver: BroadcastReceiver? = null
     @Volatile private var _syncClientVol = Prefs.SYNC_CLIENT_VOLUME.def
     private var _pendingServerVolEchoes = 0
+    // cached STREAM_MUSIC index: Fire OS logs every getStreamVolume on fixed-volume outputs, and the UI polls
+    @Volatile private var _serverVolIdxCache = 0
     // senders park volume at -30 as route closes
     private var _serverPreZeroIdx = -1
     @Volatile private var _clientVol: Float? = null
@@ -288,11 +290,13 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
         }
         ContextCompat.registerReceiver(this, mediaReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
+        _refreshServerVol()
         volumeReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
                 if (intent.getIntExtra(VolumeBroadcast.EXTRA_STREAM_TYPE, -1) != AudioManager.STREAM_MUSIC) return
                 val idx = intent.getIntExtra(VolumeBroadcast.EXTRA_VALUE, -1)
                 val prev = intent.getIntExtra(VolumeBroadcast.EXTRA_PREV_VALUE, -1)
+                _refreshServerVol()
                 if (idx < 0 || prev < 0 || idx == prev) return
                 if (_pendingServerVolEchoes > 0) { _pendingServerVolEchoes--; return }
                 if (!_syncClientVol || _connectionCount.value == 0) return
@@ -727,7 +731,7 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
     // synced: receiver volume broadcast then drives sender
     fun setClientVolume(frac: Float) {
         if (_syncClientVol) {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, _serverVolIdx(frac), 0)
+            _setServerVol(_serverVolIdx(frac))
             return
         }
         _driveClientVol(frac, if (frac > clientVolume()) 1 else -1)
@@ -741,12 +745,12 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
         }
         _setClientGain(1f)
         if (frac == null) return
-        val cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val cur = _serverVolIdxCache
         val idx = _serverVolIdx(frac)
         _serverPreZeroIdx = if (idx == 0) (if (_serverPreZeroIdx < 0) cur else _serverPreZeroIdx) else -1
         if (idx != cur) {
             _pendingServerVolEchoes++
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, idx, 0)
+            _setServerVol(idx)
         }
     }
 
@@ -758,7 +762,17 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
 
     private fun _serverVolMax() = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     private fun _serverVolIdx(frac: Float) = (frac * _serverVolMax()).roundToInt()
-    private fun _serverVolFrac() = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / _serverVolMax()
+    private fun _serverVolFrac() = _serverVolIdxCache.toFloat() / _serverVolMax()
+
+    private fun _refreshServerVol() {
+        _serverVolIdxCache = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+    }
+
+    // re-read rather than trust idx: fixed-volume outputs ignore the set
+    private fun _setServerVol(idx: Int) {
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, idx, 0)
+        _refreshServerVol()
+    }
 
     private fun _driveClientVol(target: Float, hint: Int) {
         val active = _clientVolTarget >= 0f
@@ -799,6 +813,8 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
 
     override fun onConnectionInit() {
         val firstConnection = _connectionCount.value == 0
+        // route changes (e.g. BT headphones) can move the index without a broadcast
+        _refreshServerVol()
         _connectionCount.value++
         log("Sender connected (${_connectionCount.value})")
         if (firstConnection && shouldLaunchOnConnect()) launchMainActivity()
@@ -823,7 +839,7 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
             _mainHandler.post {
                 _clientVolDriveEnd()
                 if (_serverPreZeroIdx >= 0) {
-                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, _serverPreZeroIdx, 0)
+                    _setServerVol(_serverPreZeroIdx)
                     _serverPreZeroIdx = -1
                 }
                 _applyClientVol()
@@ -1021,7 +1037,7 @@ class AirPlayService : LifecycleService(), RaopCallbackHandler, LogListener {
         droppedFrames = videoRenderer.droppedFrames,
         framePacingJitterUs = videoRenderer.framePacingJitterUs,
         audioCodec = audioRenderer.codecLabel,
-        serverVolume = 100 * audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) / _serverVolMax(),
+        serverVolume = 100 * _serverVolIdxCache / _serverVolMax(),
         clientVolume = (100 * clientVolume()).roundToInt(),
         audio = audioRenderer.audioDebug(),
         connections = _connectionCount.value,
