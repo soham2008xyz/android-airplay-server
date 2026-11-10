@@ -57,7 +57,10 @@ class DacpController(ctx: Context) {
 
     private fun _resolve() {
         if (dacpId.isEmpty()) return
-        val serviceName = "iTunes_Ctrl_$dacpId"
+        // DACP-ID is a 64-bit hex value; senders drop leading zeros in the header
+        // but advertise the zero-padded form. A wrong name never resolves, and
+        // below API 34 the hung resolve then blocks every later one.
+        val serviceName = "iTunes_Ctrl_${dacpId.padStart(16, '0')}"
         val info = NsdServiceInfo().apply {
             serviceType = "_dacp._tcp"
             this.serviceName = serviceName
